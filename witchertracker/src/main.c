@@ -34,6 +34,18 @@ int main() {
                 break;
             }
 
+            case CMD_TRADE: {
+                Trophy trophies[MAX_TROPHIES];
+                Ingredient ingredients[MAX_INGREDIENTS];
+                int trophy_count, ingredient_count;
+                if (!parse_trade_command(input, trophies, &trophy_count, ingredients, &ingredient_count)) {
+                    printf("INVALID\n");
+                    continue;
+                }
+                handle_trade(trophies, trophy_count, ingredients, ingredient_count);
+                break;
+            }
+
             case CMD_BREW: {
                 char potion_name[MAX_NAME_LEN];
                 if (!parse_brew_command(input, potion_name)) {
@@ -65,27 +77,27 @@ int main() {
             }
 
             case CMD_QUERY: {
-                // Try formula query first
-                char potion[MAX_NAME_LEN];
-                if (parse_formula_query(input, potion)) {
-                    handle_formula_query(potion);
-                    break;
-                }
-
-                // Try total specific query
+                // Try total specific query first
                 char category[MAX_NAME_LEN], name[MAX_NAME_LEN];
                 if (parse_total_specific_query(input, category, name)) {
                     handle_total_specific_query(category, name);
                     break;
                 }
 
-                // Try total all query
+                // Then try total all query
                 if (parse_total_all_query(input, category)) {
                     handle_total_all_query(category);
                     break;
                 }
 
-                // Try effectiveness query
+                // Then try formula query
+                char potion[MAX_NAME_LEN];
+                if (parse_formula_query(input, potion)) {
+                    handle_formula_query(potion);
+                    break;
+                }
+
+                // Finally try effectiveness query
                 char monster[MAX_NAME_LEN];
                 if (parse_effectiveness_query(input, monster)) {
                     handle_effectiveness_query(monster);

@@ -21,6 +21,7 @@ CommandType get_command_type(const char* line) {
     if (strncmp(line, "Geralt encounters a ", 19) == 0) return CMD_ENCOUNTER;
     if (strncmp(line, "What is in ", 10) == 0 ||
         strncmp(line, "What is effective against ", 24) == 0 ||
+        strncmp(line, "Total ", 6) == 0 ||
         strncmp(line, "How many ", 9) == 0 ||
         strncmp(line, "What are all ", 12) == 0) return CMD_QUERY;
     if (strcmp(line, "exit") == 0) return CMD_EXIT;
@@ -49,38 +50,70 @@ int parse_loot_command(const char* line, Ingredient* ingredients, int* count) {
 
 // --- Trade ---
 int parse_trade_command(const char* line, Trophy* trophies, int* trophy_count, Ingredient* ingredients, int* ingredient_count) {
-    char before[512], after[512];
-    if (!strstr(line, "for")) return 0;
-    sscanf(line, "Geralt trades %[^\n] for %[^\n]", before, after);
-
-    // Trophies
+    const char* prefix = "Geralt trades ";
+    const char* for_str = " for ";
+    
+    // Check prefix
+    if (strncmp(line, prefix, strlen(prefix)) != 0) return 0;
+    
+    // Find "for"
+    const char* for_pos = strstr(line + strlen(prefix), for_str);
+    if (!for_pos) return 0;
+    
+    // Extract trophies part
+    char trophies_str[256];
+    size_t trophies_len = for_pos - (line + strlen(prefix));
+    if (trophies_len >= sizeof(trophies_str)) return 0;
+    strncpy(trophies_str, line + strlen(prefix), trophies_len);
+    trophies_str[trophies_len] = '\0';
+    
+    // Extract ingredients part
+    const char* ingredients_start = for_pos + strlen(for_str);
+    
+    // Parse trophies
     *trophy_count = 0;
-    char* token = strtok(before, ",");
-    while (token != NULL) {
-        int qty;
-        char monster[MAX_NAME_LEN], check[16];
-        if (sscanf(token, " %d %s %s", &qty, monster, check) != 3 || strcmp(check, "trophy") != 0 || qty <= 0)
+    char* token = strtok(trophies_str, ",");
+    while (token && *trophy_count < MAX_TROPHIES) {
+        // Skip leading spaces
+        while (*token == ' ') token++;
+        
+        int quantity;
+        char monster[MAX_NAME_LEN];
+        if (sscanf(token, "%d %s trophy", &quantity, monster) == 2 && quantity > 0) {
+            trophies[*trophy_count].quantity = quantity;
+            strcpy(trophies[*trophy_count].monster_name, monster);
+            (*trophy_count)++;
+        } else {
             return 0;
-        strncpy(trophies[*trophy_count].monster_name, monster, MAX_NAME_LEN);
-        trophies[*trophy_count].quantity = qty;
-        (*trophy_count)++;
+        }
+        
         token = strtok(NULL, ",");
     }
-
-    // Ingredients
+    
+    // Parse ingredients
     *ingredient_count = 0;
-    token = strtok(after, ",");
-    while (token != NULL) {
-        int qty;
+    char ingredients_str[256];
+    strcpy(ingredients_str, ingredients_start);
+    
+    token = strtok(ingredients_str, ",");
+    while (token && *ingredient_count < MAX_INGREDIENTS) {
+        // Skip leading spaces
+        while (*token == ' ') token++;
+        
+        int quantity;
         char name[MAX_NAME_LEN];
-        if (sscanf(token, " %d %s", &qty, name) != 2 || qty <= 0) return 0;
-        strncpy(ingredients[*ingredient_count].name, name, MAX_NAME_LEN);
-        ingredients[*ingredient_count].quantity = qty;
-        (*ingredient_count)++;
+        if (sscanf(token, "%d %s", &quantity, name) == 2 && quantity > 0) {
+            ingredients[*ingredient_count].quantity = quantity;
+            strcpy(ingredients[*ingredient_count].name, name);
+            (*ingredient_count)++;
+        } else {
+            return 0;
+        }
+        
         token = strtok(NULL, ",");
     }
-
-    return 1;
+    
+    return *trophy_count > 0 && *ingredient_count > 0;
 }
 
 // --- Brew ---
@@ -92,49 +125,77 @@ int parse_brew_command(const char* line, char* potion_name) {
 // --- Learn: effectiveness ---
 int parse_learn_effectiveness(const char* line, char* item, char* monster, int* is_sign) {
     const char* prefix = "Geralt learns ";
-    const char* weak_against = " is weak against ";
+    const char* sign_suffix = " sign is effective against ";
+    const char* potion_suffix = " potion is effective against ";
     
     // Check prefix
     if (strncmp(line, prefix, strlen(prefix)) != 0) {
         return 0;
     }
     
-    // Find "is weak against"
-    const char* weak_pos = strstr(line + strlen(prefix), weak_against);
-    if (!weak_pos) {
-        return 0;
+    // Try sign format first
+    const char* sign_pos = strstr(line + strlen(prefix), sign_suffix);
+    if (sign_pos) {
+        // Extract sign name
+        size_t name_len = sign_pos - (line + strlen(prefix));
+        if (name_len >= MAX_NAME_LEN) {
+            return 0;
+        }
+        strncpy(item, line + strlen(prefix), name_len);
+        item[name_len] = '\0';
+        
+        // Extract monster name
+        const char* monster_start = sign_pos + strlen(sign_suffix);
+        size_t monster_len = strlen(monster_start);
+        
+        // Remove trailing newline if present
+        if (monster_len > 0 && monster_start[monster_len - 1] == '\n') {
+            monster_len--;
+        }
+        
+        if (monster_len >= MAX_NAME_LEN) {
+            return 0;
+        }
+        
+        strncpy(monster, monster_start, monster_len);
+        monster[monster_len] = '\0';
+        
+        *is_sign = 1;
+        return 1;
     }
     
-    // Extract monster name
-    size_t monster_len = weak_pos - (line + strlen(prefix));
-    if (monster_len >= MAX_NAME_LEN) {
-        return 0;
+    // Try potion format
+    const char* potion_pos = strstr(line + strlen(prefix), potion_suffix);
+    if (potion_pos) {
+        // Extract potion name
+        size_t name_len = potion_pos - (line + strlen(prefix));
+        if (name_len >= MAX_NAME_LEN) {
+            return 0;
+        }
+        strncpy(item, line + strlen(prefix), name_len);
+        item[name_len] = '\0';
+        
+        // Extract monster name
+        const char* monster_start = potion_pos + strlen(potion_suffix);
+        size_t monster_len = strlen(monster_start);
+        
+        // Remove trailing newline if present
+        if (monster_len > 0 && monster_start[monster_len - 1] == '\n') {
+            monster_len--;
+        }
+        
+        if (monster_len >= MAX_NAME_LEN) {
+            return 0;
+        }
+        
+        strncpy(monster, monster_start, monster_len);
+        monster[monster_len] = '\0';
+        
+        *is_sign = 0;
+        return 1;
     }
-    strncpy(monster, line + strlen(prefix), monster_len);
-    monster[monster_len] = '\0';
     
-    // Extract item name
-    const char* item_start = weak_pos + strlen(weak_against);
-    size_t item_len = strlen(item_start);
-    
-    // Remove trailing newline if present
-    if (item_len > 0 && item_start[item_len - 1] == '\n') {
-        item_len--;
-    }
-    
-    if (item_len >= MAX_NAME_LEN) {
-        return 0;
-    }
-    
-    strncpy(item, item_start, item_len);
-    item[item_len] = '\0';
-    
-    // Check if it's a sign
-    *is_sign = (strcmp(item, "Aard") == 0 || strcmp(item, "Igni") == 0 ||
-                strcmp(item, "Yrden") == 0 || strcmp(item, "Quen") == 0 ||
-                strcmp(item, "Axii") == 0);
-    
-    return 1;
+    return 0;
 }
 
 
@@ -142,29 +203,29 @@ int parse_learn_effectiveness(const char* line, char* item, char* monster, int* 
 
 int parse_learn_formula(const char* line, PotionFormula* formula) {
     const char* prefix = "Geralt learns ";
-    const char* colon = ": ";
+    const char* potion_suffix = " potion consists of ";
     
     // Check prefix
     if (strncmp(line, prefix, strlen(prefix)) != 0) {
         return 0;
     }
     
-    // Find the colon
-    const char* colon_pos = strstr(line + strlen(prefix), colon);
-    if (!colon_pos) {
+    // Find "potion consists of"
+    const char* suffix_pos = strstr(line + strlen(prefix), potion_suffix);
+    if (!suffix_pos) {
         return 0;
     }
     
     // Extract potion name
-    size_t name_len = colon_pos - (line + strlen(prefix));
+    size_t name_len = suffix_pos - (line + strlen(prefix));
     if (name_len >= MAX_NAME_LEN) {
         return 0;
     }
     strncpy(formula->name, line + strlen(prefix), name_len);
     formula->name[name_len] = '\0';
     
-    // Parse ingredients after colon
-    const char* ingredients_start = colon_pos + strlen(colon);
+    // Parse ingredients after "consists of"
+    const char* ingredients_start = suffix_pos + strlen(potion_suffix);
     char ingredients_copy[256];
     strncpy(ingredients_copy, ingredients_start, sizeof(ingredients_copy) - 1);
     ingredients_copy[sizeof(ingredients_copy) - 1] = '\0';
@@ -184,7 +245,7 @@ int parse_learn_formula(const char* line, PotionFormula* formula) {
         // Parse quantity
         int quantity;
         char name[MAX_NAME_LEN];
-        if (sscanf(token, "%d %s", &quantity, name) == 2) {
+        if (sscanf(token, "%d %s", &quantity, name) == 2 && quantity > 0) {
             formula->ingredients[formula->ingredient_count].quantity = quantity;
             strcpy(formula->ingredients[formula->ingredient_count].name, name);
             formula->ingredient_count++;
@@ -207,19 +268,26 @@ int parse_encounter_command(const char* line, char* monster_name) {
     }
     
     // Extract monster name
-    const char* monster_start = line + strlen(prefix);
-    size_t name_len = strlen(monster_start);
+    const char* start = line + strlen(prefix);
+    size_t name_len = strlen(start);
     
-    // Remove trailing newline if present
-    if (name_len > 0 && monster_start[name_len - 1] == '\n') {
+    // Remove trailing newline and spaces
+    while (name_len > 0 && (start[name_len - 1] == '\n' || isspace((unsigned char)start[name_len - 1]))) {
         name_len--;
     }
     
-    if (name_len >= MAX_NAME_LEN) {
+    if (name_len >= MAX_NAME_LEN || name_len == 0) {
         return 0;
     }
     
-    strncpy(monster_name, monster_start, name_len);
+    // Check if monster name contains only alphabetic characters and spaces
+    for (size_t i = 0; i < name_len; i++) {
+        if (!isalpha((unsigned char)start[i]) && start[i] != ' ') {
+            return 0;
+        }
+    }
+    
+    strncpy(monster_name, start, name_len);
     monster_name[name_len] = '\0';
     
     return 1;
@@ -227,70 +295,132 @@ int parse_encounter_command(const char* line, char* monster_name) {
 
 // --- Total specific query ---
 int parse_total_specific_query(const char* line, char* category, char* name) {
+    const char* prefix = "Total ";
+    
+    // Check prefix
+    if (strncmp(line, prefix, strlen(prefix)) != 0) return 0;
+    
+    // Find question mark
     const char* qmark = strrchr(line, '?');
     if (!qmark) return 0;
     
-    // First get the category
-    if (sscanf(line, "Total %s", category) != 1) return 0;
+    // Extract category and name
+    const char* start = line + strlen(prefix);
+    size_t len = qmark - start;
     
-    // Find where the category ends and name starts
-    const char* name_start = line + strlen("Total ") + strlen(category) + 1;
+    // Skip trailing spaces
+    while (len > 0 && isspace((unsigned char)*(start + len - 1))) {
+        len--;
+    }
     
-    // Find the last space before the question mark
-    const char* last_space = qmark;
-    while (last_space > line && isspace(*(last_space - 1))) last_space--;
+    // Skip leading spaces
+    while (len > 0 && isspace((unsigned char)*start)) {
+        start++;
+        len--;
+    }
     
-    // Calculate the length of the name
-    int name_len = last_space - name_start;
-    if (name_len <= 0 || name_len >= MAX_NAME_LEN) return 0;
+    // Copy to buffer for processing
+    char buffer[256];
+    if (len >= sizeof(buffer)) return 0;
+    strncpy(buffer, start, len);
+    buffer[len] = '\0';
     
-    // Copy the name
-    strncpy(name, name_start, name_len);
-    name[name_len] = '\0';
+    // Split into category and name
+    char* space = strchr(buffer, ' ');
+    if (!space) return 0;
+    *space = '\0';
+    space++;
+    
+    // Skip leading spaces in name
+    while (*space && isspace((unsigned char)*space)) {
+        space++;
+    }
+    
+    // Get category
+    if (strlen(buffer) >= MAX_NAME_LEN) return 0;
+    strcpy(category, buffer);
+    
+    // Get name
+    if (strlen(space) >= MAX_NAME_LEN) return 0;
+    strcpy(name, space);
+    
+    // Check if category is valid
+    if (strcmp(category, "ingredient") != 0 &&
+        strcmp(category, "potion") != 0 &&
+        strcmp(category, "trophy") != 0) {
+        return 0;
+    }
     
     return 1;
 }
 
 // --- Total all query ---
 int parse_total_all_query(const char* line, char* category) {
+    const char* prefix = "Total ";
+    
+    // Check prefix
+    if (strncmp(line, prefix, strlen(prefix)) != 0) return 0;
+    
+    // Find question mark
     const char* qmark = strrchr(line, '?');
     if (!qmark) return 0;
     
-    // Find where the category starts
-    const char* category_start = line + strlen("Total ");
+    // Extract category
+    const char* start = line + strlen(prefix);
+    size_t len = qmark - start;
     
-    // Find the last space before the question mark
-    const char* last_space = qmark;
-    while (last_space > line && isspace(*(last_space - 1))) last_space--;
+    // Skip trailing spaces
+    while (len > 0 && isspace((unsigned char)*(start + len - 1))) {
+        len--;
+    }
     
-    // Calculate the length of the category
-    int cat_len = last_space - category_start;
-    if (cat_len <= 0 || cat_len >= MAX_NAME_LEN) return 0;
+    // Skip leading spaces
+    while (len > 0 && isspace((unsigned char)*start)) {
+        start++;
+        len--;
+    }
     
-    // Copy the category
-    strncpy(category, category_start, cat_len);
-    category[cat_len] = '\0';
+    // Copy category
+    if (len >= MAX_NAME_LEN) return 0;
+    strncpy(category, start, len);
+    category[len] = '\0';
+    
+    // Check if category is valid
+    if (strcmp(category, "ingredient") != 0 &&
+        strcmp(category, "potion") != 0 &&
+        strcmp(category, "trophy") != 0) {
+        return 0;
+    }
     
     return 1;
 }
 
 // --- Effectiveness query ---
 int parse_effectiveness_query(const char* line, char* monster_name) {
+    const char* prefix = "What is effective against ";
+    
+    // Check prefix
+    if (strncmp(line, prefix, strlen(prefix)) != 0) {
+        return 0;
+    }
+    
+    // Find question mark
     const char* qmark = strrchr(line, '?');
     if (!qmark) return 0;
     
-    // Find where the monster name starts
-    const char* monster_start = line + strlen("What is effective against ");
+    // Extract monster name
+    const char* monster_start = line + strlen(prefix);
+    size_t name_len = qmark - monster_start;
     
-    // Find the last space before the question mark
-    const char* last_space = qmark;
-    while (last_space > line && isspace(*(last_space - 1))) last_space--;
+    // Skip trailing spaces
+    while (name_len > 0 && isspace((unsigned char)*(monster_start + name_len - 1))) {
+        name_len--;
+    }
     
-    // Calculate the length of the monster name
-    int name_len = last_space - monster_start;
-    if (name_len <= 0 || name_len >= MAX_NAME_LEN) return 0;
+    if (name_len >= MAX_NAME_LEN || name_len == 0) {
+        return 0;
+    }
     
-    // Copy the monster name
     strncpy(monster_name, monster_start, name_len);
     monster_name[name_len] = '\0';
     
@@ -300,7 +430,6 @@ int parse_effectiveness_query(const char* line, char* monster_name) {
 // --- Formula query ---
 int parse_formula_query(const char* line, char* potion_name) {
     const char* prefix = "What is in ";
-    const char* question_mark = "?";
     
     // Check prefix
     if (strncmp(line, prefix, strlen(prefix)) != 0) {
@@ -308,16 +437,17 @@ int parse_formula_query(const char* line, char* potion_name) {
     }
     
     // Find question mark
-    const char* qmark_pos = strstr(line + strlen(prefix), question_mark);
-    if (!qmark_pos) {
+    const char* qmark = strrchr(line, '?');
+    if (!qmark) {
         return 0;
     }
     
     // Extract potion name
-    size_t name_len = qmark_pos - (line + strlen(prefix));
+    const char* start = line + strlen(prefix);
+    size_t name_len = qmark - start;
     
-    // Skip trailing spaces
-    while (name_len > 0 && isspace((unsigned char)*(line + strlen(prefix) + name_len - 1))) {
+    // Skip trailing spaces before question mark
+    while (name_len > 0 && isspace((unsigned char)*(start + name_len - 1))) {
         name_len--;
     }
     
@@ -325,7 +455,7 @@ int parse_formula_query(const char* line, char* potion_name) {
         return 0;
     }
     
-    strncpy(potion_name, line + strlen(prefix), name_len);
+    strncpy(potion_name, start, name_len);
     potion_name[name_len] = '\0';
     
     return 1;

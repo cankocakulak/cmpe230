@@ -23,7 +23,7 @@ void handle_loot(Ingredient* ingredients, int count) {
 
 // --- BREW ---
 void handle_brew(const char* potion_name) {
-    // Formula var mı?
+    // Check if we have the formula
     PotionFormula* formula = NULL;
     for (int i = 0; i < inventory.formula_count; i++) {
         if (strcmp(inventory.formulas[i].name, potion_name) == 0) {
@@ -36,10 +36,12 @@ void handle_brew(const char* potion_name) {
         return;
     }
 
-    // Malzemeler yeterli mi?
+    // Check if we have enough ingredients
     for (int i = 0; i < formula->ingredient_count; i++) {
         int have = get_ingredient_quantity(&inventory, formula->ingredients[i].name);
         int need = formula->ingredients[i].quantity;
+        printf("DEBUG: Checking %s - have: %d, need: %d\n", 
+               formula->ingredients[i].name, have, need);
         if (have < need) {
             printf("Not enough ingredients (have %d %s, need %d)\n", 
                   have, formula->ingredients[i].name, need);
@@ -47,11 +49,14 @@ void handle_brew(const char* potion_name) {
         }
     }
 
-    // Malzemeleri tüket
+    // Consume ingredients
     for (int i = 0; i < formula->ingredient_count; i++) {
         add_ingredient(&inventory, formula->ingredients[i].name, -formula->ingredients[i].quantity);
+        printf("DEBUG: Consumed %d %s\n", 
+               formula->ingredients[i].quantity, formula->ingredients[i].name);
     }
 
+    // Create potion
     add_potion(&inventory, potion_name, 1);
     printf("Alchemy item created: %s\n", potion_name);
 }
@@ -101,11 +106,14 @@ void handle_learn_effectiveness(const char* item, const char* monster, int is_si
 
 void handle_total_specific_query(const char* category, const char* name) {
     if (strcmp(category, "ingredient") == 0) {
-        printf("%d\n", get_ingredient_quantity(&inventory, name));
+        int quantity = get_ingredient_quantity(&inventory, name);
+        printf("%d\n", quantity);
     } else if (strcmp(category, "potion") == 0) {
-        printf("%d\n", get_potion_quantity(&inventory, name));
+        int quantity = get_potion_quantity(&inventory, name);
+        printf("%d\n", quantity);
     } else if (strcmp(category, "trophy") == 0) {
-        printf("%d\n", get_trophy_quantity(&inventory, name));
+        int quantity = get_trophy_quantity(&inventory, name);
+        printf("%d\n", quantity);
     } else {
         printf("INVALID\n");
     }
@@ -113,11 +121,23 @@ void handle_total_specific_query(const char* category, const char* name) {
 
 void handle_total_all_query(const char* category) {
     if (strcmp(category, "ingredient") == 0) {
-        print_all_ingredients(&inventory);
+        if (inventory.ingredient_count == 0) {
+            printf("0\n");
+        } else {
+            print_all_ingredients(&inventory);
+        }
     } else if (strcmp(category, "potion") == 0) {
-        print_all_potions(&inventory);
+        if (inventory.potion_count == 0) {
+            printf("0\n");
+        } else {
+            print_all_potions(&inventory);
+        }
     } else if (strcmp(category, "trophy") == 0) {
-        print_all_trophies(&inventory);
+        if (inventory.trophy_count == 0) {
+            printf("0\n");
+        } else {
+            print_all_trophies(&inventory);
+        }
     } else {
         printf("INVALID\n");
     }
@@ -139,6 +159,29 @@ void handle_encounter(const char* monster) {
     } else {
         printf("Geralt is unprepared and barely escapes with his life\n");
     }
+}
+
+void handle_trade(Trophy* trophies, int trophy_count, Ingredient* ingredients, int ingredient_count) {
+    // Check if we have enough trophies
+    for (int i = 0; i < trophy_count; i++) {
+        int have = get_trophy_quantity(&inventory, trophies[i].monster_name);
+        int need = trophies[i].quantity;
+        if (have < need) {
+            printf("Not enough trophies\n");
+            return;
+        }
+    }
+    
+    // Remove trophies and add ingredients
+    for (int i = 0; i < trophy_count; i++) {
+        add_trophy(&inventory, trophies[i].monster_name, -trophies[i].quantity);
+    }
+    
+    for (int i = 0; i < ingredient_count; i++) {
+        add_ingredient(&inventory, ingredients[i].name, ingredients[i].quantity);
+    }
+    
+    printf("Trade successful\n");
 }
 
 // Diğer fonksiyonları istersen sonra ekleriz (trade, encounter, queries)

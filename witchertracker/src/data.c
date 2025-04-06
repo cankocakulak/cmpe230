@@ -93,7 +93,7 @@ void print_all_ingredients(const Inventory* inv) {
             count++;
         }
     }
-    if (count == 0) printf("None");
+    if (count == 0) printf("0");
     printf("\n");
 }
 
@@ -106,7 +106,7 @@ void print_all_potions(const Inventory* inv) {
             count++;
         }
     }
-    if (count == 0) printf("None");
+    if (count == 0) printf("0");
     printf("\n");
 }
 
@@ -119,7 +119,7 @@ void print_all_trophies(const Inventory* inv) {
             count++;
         }
     }
-    if (count == 0) printf("None");
+    if (count == 0) printf("0");
     printf("\n");
 }
 
