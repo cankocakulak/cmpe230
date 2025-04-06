@@ -1,3 +1,12 @@
+/**
+ * @file main.c
+ * @brief Main program entry point and command processing
+ * 
+ * This file contains the main function and command processing logic
+ * for the Witcher Tracker program. It handles user input, command parsing,
+ * and execution of game actions.
+ */
+
 #include <stdio.h>
 #include <string.h>
 
@@ -6,6 +15,14 @@
 #include "logic.h"
 #include "data.h"
 
+/**
+ * @brief Main function that processes game commands
+ * 
+ * Reads commands from stdin, parses them, and executes the appropriate
+ * game actions. Continues until an exit command is received.
+ * 
+ * @return 0 on successful execution
+ */
 int main() {
     char input[1024];
 
