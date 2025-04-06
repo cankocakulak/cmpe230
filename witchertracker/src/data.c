@@ -13,19 +13,20 @@ void init_inventory(Inventory* inv) {
 
 // Ingredient ekleme
 void add_ingredient(Inventory* inv, const char* name, int quantity) {
-    printf("DEBUG: Adding %d %s\n", quantity, name);
-    for (int i = 0; i < inv->ingredient_count; ++i) {
+    // Find existing ingredient
+    for (int i = 0; i < inv->ingredient_count; i++) {
         if (strcmp(inv->ingredients[i].name, name) == 0) {
             inv->ingredients[i].quantity += quantity;
-            printf("DEBUG: Updated quantity to %d\n", inv->ingredients[i].quantity);
             return;
         }
     }
-    // Yeni ekleme
-    strcpy(inv->ingredients[inv->ingredient_count].name, name);
-    inv->ingredients[inv->ingredient_count].quantity = quantity;
-    printf("DEBUG: New ingredient at index %d\n", inv->ingredient_count);
-    inv->ingredient_count++;
+    
+    // Add new ingredient
+    if (inv->ingredient_count < MAX_INGREDIENTS) {
+        strcpy(inv->ingredients[inv->ingredient_count].name, name);
+        inv->ingredients[inv->ingredient_count].quantity = quantity;
+        inv->ingredient_count++;
+    }
 }
 
 int get_ingredient_quantity(const Inventory* inv, const char* name) {

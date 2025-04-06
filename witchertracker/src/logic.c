@@ -23,7 +23,7 @@ void handle_loot(Ingredient* ingredients, int count) {
 
 // --- BREW ---
 void handle_brew(const char* potion_name) {
-    // Check if we have the formula
+    // Find formula
     PotionFormula* formula = NULL;
     for (int i = 0; i < inventory.formula_count; i++) {
         if (strcmp(inventory.formulas[i].name, potion_name) == 0) {
@@ -31,34 +31,48 @@ void handle_brew(const char* potion_name) {
             break;
         }
     }
+    
     if (!formula) {
         printf("No formula for %s\n", potion_name);
         return;
     }
-
-    // Check if we have enough ingredients
+    
+    // Check ingredients
     for (int i = 0; i < formula->ingredient_count; i++) {
-        int have = get_ingredient_quantity(&inventory, formula->ingredients[i].name);
-        int need = formula->ingredients[i].quantity;
-        printf("DEBUG: Checking %s - have: %d, need: %d\n", 
-               formula->ingredients[i].name, have, need);
-        if (have < need) {
-            printf("Not enough ingredients (have %d %s, need %d)\n", 
-                  have, formula->ingredients[i].name, need);
+        Ingredient* needed = &formula->ingredients[i];
+        int have = 0;
+        
+        for (int j = 0; j < inventory.ingredient_count; j++) {
+            if (strcmp(inventory.ingredients[j].name, needed->name) == 0) {
+                have = inventory.ingredients[j].quantity;
+                break;
+            }
+        }
+        
+        if (have < needed->quantity) {
+            printf("Not enough ingredients\n");
             return;
         }
     }
-
+    
     // Consume ingredients
     for (int i = 0; i < formula->ingredient_count; i++) {
-        add_ingredient(&inventory, formula->ingredients[i].name, -formula->ingredients[i].quantity);
-        printf("DEBUG: Consumed %d %s\n", 
-               formula->ingredients[i].quantity, formula->ingredients[i].name);
+        Ingredient* needed = &formula->ingredients[i];
+        for (int j = 0; j < inventory.ingredient_count; j++) {
+            if (strcmp(inventory.ingredients[j].name, needed->name) == 0) {
+                inventory.ingredients[j].quantity -= needed->quantity;
+                break;
+            }
+        }
     }
-
-    // Create potion
-    add_potion(&inventory, potion_name, 1);
-    printf("Alchemy item created: %s\n", potion_name);
+    
+    // Add potion
+    if (inventory.potion_count < MAX_POTIONS) {
+        strcpy(inventory.potions[inventory.potion_count].name, potion_name);
+        inventory.potions[inventory.potion_count].quantity = 1;
+        inventory.potion_count++;
+        printf("Alchemy item created: %s\n", potion_name);
+    }
 }
 
 // --- LEARN: formula ---
