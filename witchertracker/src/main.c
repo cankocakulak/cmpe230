@@ -64,6 +64,48 @@ int main() {
                 break;
             }
 
+            case CMD_QUERY: {
+                // Try formula query first
+                char potion[MAX_NAME_LEN];
+                if (parse_formula_query(input, potion)) {
+                    handle_formula_query(potion);
+                    break;
+                }
+
+                // Try total specific query
+                char category[MAX_NAME_LEN], name[MAX_NAME_LEN];
+                if (parse_total_specific_query(input, category, name)) {
+                    handle_total_specific_query(category, name);
+                    break;
+                }
+
+                // Try total all query
+                if (parse_total_all_query(input, category)) {
+                    handle_total_all_query(category);
+                    break;
+                }
+
+                // Try effectiveness query
+                char monster[MAX_NAME_LEN];
+                if (parse_effectiveness_query(input, monster)) {
+                    handle_effectiveness_query(monster);
+                    break;
+                }
+
+                printf("INVALID\n");
+                break;
+            }
+
+            case CMD_ENCOUNTER: {
+                char monster[MAX_NAME_LEN];
+                if (!parse_encounter_command(input, monster)) {
+                    printf("INVALID\n");
+                    continue;
+                }
+                handle_encounter(monster);
+                break;
+            }
+
             default:
                 printf("INVALID\n");
         }

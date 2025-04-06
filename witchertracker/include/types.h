@@ -8,6 +8,9 @@
 #define MAX_TROPHIES 32
 #define MAX_SIGNS 10
 #define MAX_EFFECTIVE_ITEMS 10
+#define MAX_FORMULAS 32
+#define MAX_BESTIARY 32
+#define MAX_COUNTERS 10
 
 // Ingredient
 typedef struct {
@@ -34,6 +37,13 @@ typedef struct {
     int ingredient_count;
 } PotionFormula;
 
+// Monster Counter
+typedef struct {
+    char monster_name[MAX_NAME_LEN];
+    char counters[MAX_COUNTERS][MAX_NAME_LEN];
+    int counter_count;
+} MonsterCounter;
+
 // Bestiary entry
 typedef struct {
     char monster[MAX_NAME_LEN];
@@ -53,6 +63,12 @@ typedef struct {
 
     Trophy trophies[MAX_TROPHIES];
     int trophy_count;
+
+    PotionFormula formulas[MAX_FORMULAS];
+    int formula_count;
+
+    MonsterCounter bestiary[MAX_BESTIARY];
+    int bestiary_count;
 } Inventory;
 
 // Komut tipi (parsing sonucu lazım olacak)

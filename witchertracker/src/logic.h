@@ -17,5 +17,7 @@ void handle_total_specific(const char* category, const char* name);
 void handle_total_all(const char* category);
 void handle_effectiveness_query(const char* monster);
 void handle_formula_query(const char* potion_name);
+void handle_total_specific_query(const char* category, const char* name);
+void handle_total_all_query(const char* category);
 
 #endif

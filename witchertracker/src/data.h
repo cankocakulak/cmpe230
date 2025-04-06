@@ -19,7 +19,15 @@ int get_potion_quantity(const Inventory* inv, const char* name);
 void add_trophy(Inventory* inv, const char* monster, int quantity);
 int get_trophy_quantity(const Inventory* inv, const char* monster);
 
-// Ingredient listesi yazdırma (örnek için)
+// Yazdırma işlemleri
 void print_all_ingredients(const Inventory* inv);
+void print_all_potions(const Inventory* inv);
+void print_all_trophies(const Inventory* inv);
+
+// Monster ve potion işlemleri
+void print_monster_effectiveness(const Inventory* inv, const char* monster);
+void print_potion_formula(const Inventory* inv, const char* potion);
+int has_effective_counter(const Inventory* inv, const char* monster);
+void consume_effective_potions(Inventory* inv, const char* monster);
 
 #endif
