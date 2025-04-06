@@ -1,3 +1,11 @@
+/**
+ * @file parser.c
+ * @brief Implementation of command parsing functions
+ * 
+ * This file implements the functions for parsing various game commands,
+ * including loot, trade, brew, learn, and query commands.
+ */
+
 #include "parser.h"
 #include <stdio.h>
 #include <string.h>
@@ -12,7 +20,15 @@ static void trim_newline(char* str) {
     str[strcspn(str, "\n")] = 0;
 }*/
 
-// --- Komut Tipi Belirleme ---
+/**
+ * @brief Determines the type of command from the input line
+ * 
+ * Checks the input line against known command patterns to determine
+ * the type of command being issued.
+ * 
+ * @param line The input command line
+ * @return The type of command (CMD_LOOT, CMD_TRADE, etc.)
+ */
 CommandType get_command_type(const char* line) {
     if (strncmp(line, "Geralt loots ", 12) == 0) return CMD_LOOT;
     if (strncmp(line, "Geralt trades ", 13) == 0) return CMD_TRADE;
@@ -28,7 +44,16 @@ CommandType get_command_type(const char* line) {
     return CMD_INVALID;
 }
 
-// --- Loot ---
+/**
+ * @brief Parses a loot command to extract ingredients
+ * 
+ * Extracts ingredient names and quantities from a loot command.
+ * 
+ * @param line The input command line
+ * @param ingredients Array to store parsed ingredients
+ * @param count Pointer to store the number of ingredients
+ * @return 1 if parsing was successful, 0 otherwise
+ */
 int parse_loot_command(const char* line, Ingredient* ingredients, int* count) {
     char buffer[1024];
     strncpy(buffer, line + 13, sizeof(buffer));
@@ -48,7 +73,18 @@ int parse_loot_command(const char* line, Ingredient* ingredients, int* count) {
     return 1;
 }
 
-// --- Trade ---
+/**
+ * @brief Parses a trade command to extract trophies and ingredients
+ * 
+ * Extracts trophy and ingredient information from a trade command.
+ * 
+ * @param line The input command line
+ * @param trophies Array to store parsed trophies
+ * @param trophy_count Pointer to store the number of trophies
+ * @param ingredients Array to store parsed ingredients
+ * @param ingredient_count Pointer to store the number of ingredients
+ * @return 1 if parsing was successful, 0 otherwise
+ */
 int parse_trade_command(const char* line, Trophy* trophies, int* trophy_count, Ingredient* ingredients, int* ingredient_count) {
     const char* prefix = "Geralt trades ";
     const char* for_str = " for ";
@@ -116,13 +152,29 @@ int parse_trade_command(const char* line, Trophy* trophies, int* trophy_count, I
     return *trophy_count > 0 && *ingredient_count > 0;
 }
 
-// --- Brew ---
+/**
+ * @brief Parses a brew command to extract the potion name
+ * 
+ * @param line The input command line
+ * @param potion_name Buffer to store the potion name
+ * @return 1 if parsing was successful, 0 otherwise
+ */
 int parse_brew_command(const char* line, char* potion_name) {
     if (sscanf(line, "Geralt brews %[^\n]", potion_name) != 1) return 0;
     return 1;
 }
 
-// --- Learn: effectiveness ---
+/**
+ * @brief Parses a learn effectiveness command
+ * 
+ * Extracts the item name, monster name, and whether it's a sign or potion.
+ * 
+ * @param line The input command line
+ * @param item Buffer to store the item name
+ * @param monster Buffer to store the monster name
+ * @param is_sign Pointer to store whether the item is a sign
+ * @return 1 if parsing was successful, 0 otherwise
+ */
 int parse_learn_effectiveness(const char* line, char* item, char* monster, int* is_sign) {
     const char* prefix = "Geralt learns ";
     const char* sign_suffix = " sign is effective against ";
@@ -198,9 +250,15 @@ int parse_learn_effectiveness(const char* line, char* item, char* monster, int* 
     return 0;
 }
 
-
-// --- Learn: potion formula ---
-
+/**
+ * @brief Parses a learn formula command
+ * 
+ * Extracts the potion name and its ingredients from a formula learning command.
+ * 
+ * @param line The input command line
+ * @param formula Structure to store the parsed formula
+ * @return 1 if parsing was successful, 0 otherwise
+ */
 int parse_learn_formula(const char* line, PotionFormula* formula) {
     const char* prefix = "Geralt learns ";
     const char* potion_suffix = " potion consists of ";
@@ -257,8 +315,15 @@ int parse_learn_formula(const char* line, PotionFormula* formula) {
     return formula->ingredient_count > 0;
 }
 
-
-// --- Encounter ---
+/**
+ * @brief Parses an encounter command
+ * 
+ * Extracts the monster name from an encounter command.
+ * 
+ * @param line The input command line
+ * @param monster Buffer to store the monster name
+ * @return 1 if parsing was successful, 0 otherwise
+ */
 int parse_encounter_command(const char* line, char* monster_name) {
     const char* prefix = "Geralt encounters a ";
     
@@ -293,7 +358,16 @@ int parse_encounter_command(const char* line, char* monster_name) {
     return 1;
 }
 
-// --- Total specific query ---
+/**
+ * @brief Parses a total specific query command
+ * 
+ * Extracts the category and item name from a total query.
+ * 
+ * @param line The input command line
+ * @param category Buffer to store the category
+ * @param name Buffer to store the item name
+ * @return 1 if parsing was successful, 0 otherwise
+ */
 int parse_total_specific_query(const char* line, char* category, char* name) {
     const char* prefix = "Total ";
     
@@ -354,7 +428,15 @@ int parse_total_specific_query(const char* line, char* category, char* name) {
     return 1;
 }
 
-// --- Total all query ---
+/**
+ * @brief Parses a total all query command
+ * 
+ * Extracts the category from a total all query.
+ * 
+ * @param line The input command line
+ * @param category Buffer to store the category
+ * @return 1 if parsing was successful, 0 otherwise
+ */
 int parse_total_all_query(const char* line, char* category) {
     const char* prefix = "Total ";
     
@@ -395,7 +477,15 @@ int parse_total_all_query(const char* line, char* category) {
     return 1;
 }
 
-// --- Effectiveness query ---
+/**
+ * @brief Parses an effectiveness query command
+ * 
+ * Extracts the monster name from an effectiveness query.
+ * 
+ * @param line The input command line
+ * @param monster Buffer to store the monster name
+ * @return 1 if parsing was successful, 0 otherwise
+ */
 int parse_effectiveness_query(const char* line, char* monster_name) {
     const char* prefix = "What is effective against ";
     
@@ -427,7 +517,15 @@ int parse_effectiveness_query(const char* line, char* monster_name) {
     return 1;
 }
 
-// --- Formula query ---
+/**
+ * @brief Parses a formula query command
+ * 
+ * Extracts the potion name from a formula query.
+ * 
+ * @param line The input command line
+ * @param potion_name Buffer to store the potion name
+ * @return 1 if parsing was successful, 0 otherwise
+ */
 int parse_formula_query(const char* line, char* potion_name) {
     const char* prefix = "What is in ";
     
