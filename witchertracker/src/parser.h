@@ -1,7 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "types.h"
+#include "../include/types.h"
 
 // Komut türünü belirle (loot, trade, brew, learn, etc.)
 CommandType get_command_type(const char* line);

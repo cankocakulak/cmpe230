@@ -1,7 +1,7 @@
 #ifndef LOGIC_H
 #define LOGIC_H
 
-#include "types.h"
+#include "../include/types.h"
 
 // Global yapılar (örnek, daha sonra singleton'a çevrilebilir)
 extern Inventory inventory;

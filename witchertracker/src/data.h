@@ -2,7 +2,7 @@
 #ifndef DATA_H
 #define DATA_H
 
-#include "types.h"
+#include "../include/types.h"
 
 // Envanteri başlat
 void init_inventory(Inventory* inv);
