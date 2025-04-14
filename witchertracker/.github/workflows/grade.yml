@@ -1,0 +1,44 @@
+name: Grade
+
+on: push
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    container: gokceuludogan/cmpe230_spring24:latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Compile C Program
+        run: |
+          make|| { echo "❌ Compilation Failed"; exit 1; }
+          echo "✅ Compilation Successful"
+
+      - name: Verify Test Cases Directory
+        run: |
+          if [ -d "test-cases" ]; then
+            echo "✅ test-cases directory exists."
+          else
+            echo "❌ test-cases directory is missing!"
+            exit 1
+          fi
+
+      - name: Debug Test Cases
+        run: ls -l test-cases || echo "No test cases found!"
+        
+      - name: Run
+        run:
+          make grade -s > grade.txt
+          
+      - name: Grade
+        run: |
+          cat grade.txt
+          echo "Grade: " >> $GITHUB_STEP_SUMMARY 
+          cat grade.txt >> $GITHUB_STEP_SUMMARY
+          # Extract the last line of grade.txt and ensure it's plain text (no emojis)
+          tail -n 1 grade.txt | sed 's/[^a-zA-Z0-9 /]//g' > sanitized_grade.txt
+          echo "output=$(cat sanitized_grade.txt)" >> $GITHUB_ENV

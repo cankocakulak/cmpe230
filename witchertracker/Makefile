@@ -1,8 +1,5 @@
-CC=gcc
-CFLAGS=-Iinclude -Wall
+default:
+	gcc -o witchertracker src/main.c 
 
-SRC=src/main.c src/data.c src/parser.c src/logic.c
-OUT=witchertracker
-
-all:
-	$(CC) $(SRC) -o $(OUT) $(CFLAGS)
+grade:
+	python3 test/grader.py ./witchertracker test-cases

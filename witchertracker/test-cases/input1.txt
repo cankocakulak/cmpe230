@@ -17,4 +17,4 @@ Geralt learns Swallow potion consists of 10 Vitriol, 4 Rebis
 Geralt brews Swallow
 Geralt loots 2 Vitriol, 2 Rebis
 Geralt brews Swallow
-Total potion Swallow? 
+Total potion Swallow?
